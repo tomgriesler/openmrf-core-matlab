@@ -1,0 +1,55 @@
+function imghandle=tv(in,dim,lim,nrow)
+
+%dim:       Welche Dimension ist die dritte?
+%lim:        optional:  lim=[minval maxval]
+%nrow:     optional:  Anzahl der Spalten
+if exist('dim')~=1,
+    dim = 3;
+end
+
+perm=cmshiftnd([1 2 3],[0 dim]);
+in=permute(in,perm);
+[y x s]=size(in);
+
+if exist('nrow')~=1,
+    nrow=ceil(sqrt(s));
+end
+
+if exist('lim')~=1,
+    lim = []
+end
+
+% perm=cmshiftnd([1 2 3],[0 dim]);
+% in=permute(in,perm);
+% [y x s]=size(in);
+
+%if nargin<3, nrow=ceil(sqrt(s));lim=[];end
+
+
+
+ncol=ceil(s/nrow);
+
+innew=zeros(y,x,ncol*nrow);
+innew(:,:,1:s)=in(:,:,1:s);
+tmp=reshape(permute(reshape(reshape(innew,[y x*nrow*ncol]),[y x*nrow ncol]),[1 3 2]),[y*ncol x*nrow]);
+if nargout >0,
+out=tmp;
+end
+if isempty(lim),
+imghandle=imagesc(tmp);
+elseif isequal(lim(1),lim(2))
+    imghandle=imagesc(tmp);
+else
+ imghandle=imagesc(tmp,lim);
+end
+%contrastimage(gcf)
+[nx, ny]=size(tmp);
+
+
+dx=ncol;
+dy=nrow;
+ytick=[0:dx-1]*y;
+xtick=[0:dy-1]*x;
+set(gca,'xgrid','on','xcolor','b','tickdir','in','xtick',xtick,'xticklabel',[])
+set(gca,'ygrid','on','ycolor','b','tickdir','in','ytick',ytick,'yticklabel',[])
+

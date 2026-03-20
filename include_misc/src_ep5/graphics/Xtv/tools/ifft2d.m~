@@ -1,0 +1,31 @@
+function out=ifft2d(in,zf);
+
+dim = size(in);
+
+
+tmp1 = ifft1d(in,)
+
+
+
+if nargin == 2
+    a = ones(1,ndims(in));
+    a(1,end-1:end) = zf;
+    tmp1 = matresize(in,round(size(in).*a./2)*2);
+else
+    
+    
+    tmp1 = in;
+end
+
+clear in
+
+
+dim=size(sig);
+
+shift=zeros(1,size(dim,2));
+shift(1,end-1)=dim(end-1)/2;
+shift(1,end)=dim(end)/2;
+%shift
+
+
+img=cmshiftnd(ifft(ifft(cmshiftnd(sig,shift),[],size(dim,2)-1),[],size(dim,2)),shift);

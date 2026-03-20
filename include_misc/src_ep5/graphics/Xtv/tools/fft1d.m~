@@ -1,0 +1,23 @@
+function out=fft1d(in,dim,zf);
+
+
+if nargin == 3
+    a = ones(1,ndims(in));
+    a(1,dim) = zf;
+    tmp = matresize(in,round(size(in).*a./2)*2);
+else
+    
+    
+    tmp = in;
+end
+
+clear in
+
+tmp1 = fftshift(tmp,dim); 
+clear tmp
+tmp2 = fft(tmp1,[],dim); 
+clear tmp;
+out = fftshift(tmp1,dim); 
+clear tmp1;
+
+%fftshift(fft(fftshift(in,dim),[],dim),dim);

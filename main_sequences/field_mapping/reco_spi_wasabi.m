@@ -6,7 +6,7 @@ zero_params.radius = 6.0;
 zero_params.factor = 2.0;
 
 cmaps = [];
-[Images, PULSEQ, study_info, cmaps, dcf2D, f0] = SPI_reco([], cmaps, zero_params, [], []);
+[Images, PULSEQ, study_info] = SPI_reco([], [], [], cmaps, zero_params, [], []);
 NImages = size(Images, 1);
 
 %% mask and normalize data to S0

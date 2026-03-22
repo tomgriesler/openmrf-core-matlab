@@ -5,7 +5,7 @@ zero_params.onoff  = 1;
 zero_params.radius = 6.0;
 zero_params.factor = 2.0;
 
-[Images, PULSEQ, study_info, cmaps, f0] = GRE_reco([], [], zero_params, []);
+[Images, PULSEQ, study_info, cmaps] = GRE_reco([], [], [], [], zero_params, []);
 xtv(Images)
 
 TEs = PULSEQ.GRE.TEs;

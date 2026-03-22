@@ -1,9 +1,12 @@
-function [Images, PULSEQ, study_info, cmaps, dcf2D, f0, rawdata_noise] = SPI_reco(study, cmaps, zero_params, mod_reco, ktraj_meas)
+function [Images, PULSEQ, study_info, cmaps, dcf2D] = SPI_reco(path_raw, path_backup, vendor, cmaps, zero_params, mod_reco, ktraj_meas)
 
 % Author: Maximilian Gram, University Hospital Wuerzburg, Wuerzburg, Germany; V1, 09.03.2026
+% Author: Maximilian Gram, University Hospital Wuerzburg, Wuerzburg, Germany; V2, 22.03.2026; unify for different vendors
 
 % ----- Input -----
-% study:       enter path of study '.dat' or [] for dropdown select
+% path_raw:    path of meas data or [] for select via uigetfile
+% path_backup: path of pulseq workspace backup; not necessary for Siemens
+% vendor:      vendor name
 % cmaps:       enter [] for calculating cmaps via openadapt or espirit
 % zero_params: parameters for zero interpolation filling
 % mod_reco:    1 -> openadapt()
@@ -12,7 +15,9 @@ function [Images, PULSEQ, study_info, cmaps, dcf2D, f0, rawdata_noise] = SPI_rec
 
 % case: no input arguments
 if nargin==0
-    study       = [];
+    path_raw    = [];
+    path_backup = [];
+    vendor      = [];
     cmaps       = [];
     zero_params = [];
     mod_reco    = [];
@@ -29,25 +34,17 @@ if isempty(mod_reco)
     mod_reco = 2;
 end
 
-% read study info and pulseq workspace
-[twix_obj, study_info, PULSEQ] = pulseq_read_meas_siemens(study);
+% import rawdata, read study info and load pulseq workspace
+[rawdata1, rawdata_noise, PULSEQ, study_info] = pulseq_read_meas(path_raw, path_backup, vendor);
 
-%% import spiral rawdata and noise pre-scans
-if isfield(PULSEQ.SPI, 'Nnoise')
-    Nnoise = PULSEQ.SPI.Nnoise;  
-else
-    Nnoise = 0;
-end
-[rawdata1, NImages, NRead, NCoils, rawdata_noise] = SPI_get_rawdata(twix_obj, Nnoise);
-NR            = PULSEQ.SPI.NR;
-NImages       = NImages / NR;
-f0            = study_info.f0;
-rawdata1      = permute(rawdata1, [3, 1, 2]);
-rawdata_noise = permute(rawdata_noise, [3, 1, 2]);
+%% read dimensions
+NR = PULSEQ.SPI.NR;
+[NCoils, NImages, NRead]  = size(rawdata1);
+NImages = NImages / NR;
 
 %% noise pre-whitening
 if ~isempty(rawdata_noise)
-    [rawdata1] = mg_noise_prewhitening(rawdata1, rawdata_noise, 'cholesky', 1);
+    rawdata1 = mg_noise_prewhitening(rawdata1, rawdata_noise, 'cholesky', 1);
 end
 
 %% import measured k-space trajectories

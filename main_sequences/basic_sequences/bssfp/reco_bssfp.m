@@ -6,6 +6,6 @@ zero_params.radius = 6.0;
 zero_params.factor = 2.0;
 
 cmaps = [];
-[Images, PULSEQ, study_info, cmaps] = GRE_reco([], [], [], cmaps, zero_params, []);
+[Images, PULSEQ, study_info, cmaps] = BSSFP_reco([], [], [], cmaps, zero_params, []);
 
 xtv(Images);

@@ -1,6 +1,7 @@
 function [rawdata, noise, PULSEQ, study_info] = pulseq_read_meas(path_raw, path_backup, vendor)
 
     % Author: Maximilian Gram, University Hospital Wuerzburg, Wuerzburg, Germany; V1, 09.03.2026
+    % Author: Maximilian Gram, University Hospital Wuerzburg, Wuerzburg, Germany; V2, 22.03.2026
     
     % ----- Input: -----
     % path_raw:      file path to rawdata (.dat for Siemens or .mat for others)
@@ -13,11 +14,54 @@ function [rawdata, noise, PULSEQ, study_info] = pulseq_read_meas(path_raw, path_
     % PULSEQ       struct containing all sequence parameters
     % study_info:  struct containing scan/study specific header information
 
+    %% init paths
+
+    % defaults
+    if nargin<3
+        vendor = [];
+    end
+    if nargin<2
+        path_backup = [];
+    end
+    if nargin<1
+        path_raw = [];
+    end
+    if isempty(vendor)
+        vendor = 'Siemens';
+    end
+
+    % select rawdata via uigetfile()
+    if isempty(path_raw)
+        [~, ~, path_raw]       = pulseq_get_user_definitions([], 0);
+        [temp_name, temp_path] = uigetfile('*.*', 'Select a file', path_raw );
+        path_raw               = [temp_path temp_name];
+        clear temp_name temp_path;
+    end
+
+    % check file extension
+    path_raw = strrep(path_raw, '\', '/');
+    [~, temp_name, temp_ext] = fileparts(path_raw);
+    if isempty(temp_ext)
+        error(['sepcifiy file extension for: ' temp_name]);
+    end
+    clear temp_name temp_ext;
+    
+    % check file extension
+    if ~isempty(path_backup)
+        path_backup = strrep(path_backup, '\', '/');
+        [~, ~, temp_ext] = fileparts(path_backup);
+        if isempty(temp_ext)
+            error(['sepcifiy file extension for: ' path_backup]);
+        end
+        clear temp_ext;
+    end
+
+    %% load rawdata and pulseq backups depending on vendor
     switch vendor
         case 'Siemens' % for Siemens, we can automatically link rawdata and pulseq backups
-            [twix_obj, study_info, PULSEQ] = pulseq_read_meas_siemens(path_raw);
-            rawdata = SPI_get_rawdata(twix_obj);
-            rawdata = permute(rawdata, [3, 1, 2]); % coils x tr x adc
+            [twix_obj, study_info, PULSEQ] = pulseq_read_twix_siemens(path_raw);
+            rawdata = twix_obj.image.unsorted();
+            rawdata = permute(rawdata, [2, 3, 1]); % coils x tr x adc
             if ~isempty(path_backup)
                 load(path_backup);
                 warning('automatic PULSEQ backup was overwritten for Siemens scan!');
@@ -39,6 +83,7 @@ function [rawdata, noise, PULSEQ, study_info] = pulseq_read_meas(path_raw, path_
             study_info.time_stamps = time_stamps;
     end
 
+    %% split meas data and noise pre-scans
     if isfield(PULSEQ, 'SPI') && isfield(PULSEQ.SPI, 'Nnoise') && PULSEQ.SPI.Nnoise>0
         noise = rawdata(:,1:PULSEQ.SPI.Nnoise,:);
         rawdata(:,1:PULSEQ.SPI.Nnoise,:) = [];

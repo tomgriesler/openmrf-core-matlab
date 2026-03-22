@@ -1,17 +1,23 @@
-function [Images, PULSEQ, study_info, cmaps, dcf2D, f0] = SPI_reco_cg_sense(study, cmaps, zero_params, n_iter, mod_reco, ktraj_meas)
+function [Images, PULSEQ, study_info, cmaps, dcf2D] = SPI_reco_cg_sense(path_raw, path_backup, vendor, cmaps, zero_params, n_iter, mod_reco, ktraj_meas)
 
 % Author: Maximilian Gram, University Hospital Wuerzburg, Wuerzburg, Germany; V1, 09.03.2026
+% Author: Maximilian Gram, University Hospital Wuerzburg, Wuerzburg, Germany; V2, 22.03.2026; unify for different vendors
 
 % ----- Input -----
-% study:       enter path of study '.dat' or [] for dropdown select
+% path_raw:    path of meas data or [] for select via uigetfile
+% path_backup: path of pulseq workspace backup; not necessary for Siemens
+% vendor:      vendor name
 % cmaps:       enter [] for calculating cmaps via openadapt or espirit
 % zero_params: parameters for zero interpolation filling
 % mod_reco:    1 -> openadapt()
 %              2 -> espirit()
+% ktraj_meas:  [2 x Nid x Nadc] measured k-space trajectories															 
 
 % case: no input arguments
 if nargin==0
-    study       = [];
+    path_raw    = [];
+    path_backup = [];
+    vendor      = [];
     cmaps       = [];
     zero_params = [];
     n_iter      = [];
@@ -32,25 +38,17 @@ if isempty(n_iter)
     n_iter = 25; % number of cg sense iterations
 end
 
-% read study info and pulseq workspace
-[twix_obj, study_info, PULSEQ] = pulseq_read_meas_siemens(study);
+% import rawdata, read study info and load pulseq workspace
+[rawdata, rawdata_noise, PULSEQ, study_info] = pulseq_read_meas(path_raw, path_backup, vendor);
 
-%% import spiral rawdata and noise pre-scans
-if isfield(PULSEQ.SPI, 'Nnoise')
-    Nnoise = PULSEQ.SPI.Nnoise;  
-else
-    Nnoise = 0;
-end
-[rawdata1, NImages, NRead, NCoils, rawdata_noise] = SPI_get_rawdata(twix_obj, Nnoise);
-NR            = PULSEQ.SPI.NR;
-NImages       = NImages / NR;
-f0            = study_info.f0;
-rawdata1      = permute(rawdata1, [3, 1, 2]);
-rawdata_noise = permute(rawdata_noise, [3, 1, 2]);
+%% read dimensions
+NR = PULSEQ.SPI.NR;
+[NCoils, NImages, NRead]  = size(rawdata);
+NImages = NImages / NR;
 
 %% noise pre-whitening
 if ~isempty(rawdata_noise)
-    [rawdata1] = mg_noise_prewhitening(rawdata1, rawdata_noise, 'cholesky', 1);
+    rawdata = mg_noise_prewhitening(rawdata, rawdata_noise, 'cholesky', 1);
 end
 
 %% import measured k-space trajectories
@@ -71,20 +69,20 @@ end
 %% adc padding
 if isfield(PULSEQ.SPI, 'adcNPad')
     if numel(PULSEQ.SPI.adcNPad) == 2
-        rawdata1   = rawdata1(:,:, PULSEQ.SPI.adcNPad(1):PULSEQ.SPI.adcNPad(2));
+        rawdata   = rawdata(:,:, PULSEQ.SPI.adcNPad(1):PULSEQ.SPI.adcNPad(2));
         ktraj_reco = ktraj_reco(:,:, PULSEQ.SPI.adcNPad(1):PULSEQ.SPI.adcNPad(2));
     else
-        rawdata1   = rawdata1(:,:,PULSEQ.SPI.adcNPad+1:end);
+        rawdata   = rawdata(:,:,PULSEQ.SPI.adcNPad+1:end);
         ktraj_reco = ktraj_reco(:,:,PULSEQ.SPI.adcNPad+1:end);
     end
-    NRead = size(rawdata1, 3);
+    NRead = size(rawdata, 3);
 end
 
 %% join NRs
 rawdata2 = zeros(NCoils, NImages, NRead*NR);
 for j = 1:NCoils
 for k = 1:NImages
-    temp = squeeze(rawdata1(j, (k-1)*NR+1:k*NR ,:));
+    temp = squeeze(rawdata(j, (k-1)*NR+1:k*NR ,:));
     temp = temp(:);
     rawdata2(j, k, :) = temp(:);
 end

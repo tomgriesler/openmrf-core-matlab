@@ -1,9 +1,12 @@
-function [Images, PULSEQ, study_info, cmaps, dcf2D, f0] = SPITSE_reco(study, cmaps, zero_params, mod_reco)
+function [Images, PULSEQ, study_info, cmaps, dcf2D] = SPITSE_reco(path_raw, path_backup, vendor, cmaps, zero_params, mod_reco)
 
 % Author: Maximilian Gram, University Hospital Wuerzburg, Wuerzburg, Germany; V1, 09.03.2026
+% Author: Maximilian Gram, University Hospital Wuerzburg, Wuerzburg, Germany; V2, 22.03.2026; unify for different vendors
 
 % ----- Input -----
-% study:       enter path of study '.dat' or [] for dropdown select
+% path_raw:    path of meas data or [] for select via uigetfile
+% path_backup: path of pulseq workspace backup; not necessary for Siemens
+% vendor:      vendor name
 % cmaps:       enter [] for calculating cmaps via openadapt or espirit
 % zero_params: parameters for zero interpolation filling
 % mod_reco:    1 -> openadapt()
@@ -11,7 +14,9 @@ function [Images, PULSEQ, study_info, cmaps, dcf2D, f0] = SPITSE_reco(study, cma
 
 % case: no input arguments
 if nargin==0
-    study       = [];
+    path_raw    = [];
+    path_backup = [];
+    vendor      = [];
     cmaps       = [];
     zero_params = [];
     mod_reco    = [];
@@ -27,19 +32,17 @@ if isempty(mod_reco)
     mod_reco = 2;
 end
 
-% read study info and pulseq workspace
-[twix_obj, study_info, PULSEQ] = pulseq_read_meas_siemens(study);
+% import rawdata, read study info and load pulseq workspace
+[rawdata10D, ~, PULSEQ, study_info] = pulseq_read_meas(path_raw, path_backup, vendor);
 
 %% import spiral rawdata
-rawdata10D = twix_obj.image();
-NRead      = size(rawdata10D,1);
-NCoils     = size(rawdata10D,2);
-NSeg       = PULSEQ.SPITSE.NEcho;
-NImages    = size(rawdata10D,3)/NSeg;
-f0         = study_info.f0;
+[NCoils, NImages, NRead] = size(rawdata10D);
+NSeg    = PULSEQ.SPITSE.NEcho;
+NImages = NImages/NSeg;
 
 %% sort segmented data
-rawdata = zeros(NRead*NSeg, NCoils, NImages);
+rawdata10D = permute(rawdata10D, [3,1,2]);
+rawdata    = zeros(NRead*NSeg, NCoils, NImages);
 for j=1:NCoils
     temp1 = squeeze(rawdata10D(:,j,:));
     temp2 = temp1(:);

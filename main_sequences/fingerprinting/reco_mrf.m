@@ -9,8 +9,6 @@ clear
 vendor           = 'Siemens';
 path_raw_mrf     = 'Q:/data/Pulseq/Rawdata/mgram/SolaMIITT/250311_tests_v151/meas_MID00308_FID84185_260311_0123_mgram_mrf_yun.dat';
 path_raw_traj    = 'Q:/data/Pulseq/Rawdata/mgram/SolaMIITT/250311_tests_v151/meas_MID00321_FID84198_260311_0203_mgram_traj_260311_0123.dat';
-% path_raw_mrf     = 'Q:/data/Pulseq/Rawdata/mgram/SolaMIITT/250311_tests_v151/meas_MID00314_FID84191_260311_0132_mgram_rosette_cmrf.dat';
-% path_raw_traj    = [];
 path_backup_mrf  = [];
 path_backup_traj = [];
 

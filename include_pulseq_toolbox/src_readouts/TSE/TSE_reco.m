@@ -1,9 +1,12 @@
-function [Images, PULSEQ, study_info, cmaps, f0] = TSE_reco(study, cmaps, zero_params, mod_reco)
+function [Images, PULSEQ, study_info, cmaps] = TSE_reco(path_raw, path_backup, vendor, cmaps, zero_params, mod_reco)
 
 % Author: Maximilian Gram, University Hospital Wuerzburg, Wuerzburg, Germany; V1, 09.03.2026
+% Author: Maximilian Gram, University Hospital Wuerzburg, Wuerzburg, Germany; V2, 22.03.2026; unify for different vendors
 
 % ----- Input -----
-% study:       enter path of study '.dat' or [] for dropdown select
+% path_raw:    path of meas data or [] for select via uigetfile
+% path_backup: path of pulseq workspace backup; not necessary for Siemens
+% vendor:      vendor name
 % cmaps:       enter [] for calculating cmaps via openadapt or espirit
 % zero_params: parameters for zero interpolation filling
 % mod_reco:    0 -> sqrt(sum(abs(coils).^2,1)),
@@ -12,7 +15,9 @@ function [Images, PULSEQ, study_info, cmaps, f0] = TSE_reco(study, cmaps, zero_p
 
 % case: no input arguments
 if nargin==0
-    study       = [];
+    path_raw    = [];
+    path_backup = [];
+    vendor      = [];
     cmaps       = [];
     zero_params = [];
     mod_reco    = [];
@@ -28,23 +33,19 @@ if isempty(mod_reco)
     mod_reco = 2;
 end
 
-% read study info and pulseq workspace
-[twix_obj, study_info, PULSEQ] = pulseq_read_meas_siemens(study);
+% import rawdata, read study info and load pulseq workspace
+[rawdata, ~, PULSEQ, study_info] = pulseq_read_meas(path_raw, path_backup, vendor);
 
 %% read parameters for reconstruction
 NImages = 1;
-NTurbo  = PULSEQ.TSE.n_echo;
 os_mode = PULSEQ.TSE.os_mode;
 
-%% import/sort kSpace rawdata
+%% remove oversampling
 if os_mode == 1
-    twix_obj.image.flagRemoveOS = 1;
+    rawdata = (rawdata(:,:,1:2:end) + rawdata(:,:,2:2:end)) / 2;
 end
-rawdata = squeeze(twix_obj.image());
-f0      = study_info.f0;
 
 %% reshape rawdata
-rawdata    = double(permute(rawdata, [2,3,1]));
 Nx         = size(rawdata,3);
 Ny         = size(rawdata,2)/NImages;
 NCoils     = size(rawdata,1);

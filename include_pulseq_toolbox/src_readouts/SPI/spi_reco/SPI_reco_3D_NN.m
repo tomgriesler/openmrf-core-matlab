@@ -1,6 +1,7 @@
-function [Images, PULSEQ, study_info] = SPI_reco_3D_NN(study, zero_params, ktraj_meas)
+function [Images, PULSEQ, study_info] = SPI_reco_3D_NN(path_raw, path_backup, vendor, zero_params, ktraj_meas)
 
 % Author: Maximilian Gram, University Hospital Wuerzburg, Wuerzburg, Germany; V1, 09.03.2026
+% Author: Maximilian Gram, University Hospital Wuerzburg, Wuerzburg, Germany; V2, 22.03.2026; unify for different vendors
 
 % reconstruction for 3D datasets measured with, e.g. cones or seiffert spirals
 % I don't need this, so I implemented a very simple
@@ -9,7 +10,9 @@ function [Images, PULSEQ, study_info] = SPI_reco_3D_NN(study, zero_params, ktraj
 
 % case: no input arguments
 if nargin==0
-    study       = [];
+    path_raw    = [];
+    path_backup = [];
+    vendor      = [];
     zero_params = [];
     ktraj_meas  = [];
 end
@@ -21,19 +24,8 @@ if isempty(zero_params)
     zero_params.factor = 2.0;
 end
 
-% read study info and pulseq workspace
-[twix_obj, study_info, PULSEQ] = pulseq_read_meas_siemens(study);
-
-%% import spiral rawdata and noise pre-scans
-if isfield(PULSEQ.SPI, 'Nnoise')
-    Nnoise = PULSEQ.SPI.Nnoise;  
-else
-    Nnoise = 0;
-end
-[rawdata, ~, ~, ~, rawdata_noise] = SPI_get_rawdata(twix_obj, Nnoise);
-rawdata       = permute(rawdata, [3, 1, 2]);
-rawdata_noise = permute(rawdata_noise, [3, 1, 2]);
-clear twix_obj;
+% import rawdata, read study info and load pulseq workspace
+[rawdata, rawdata_noise, PULSEQ, study_info] = pulseq_read_meas(path_raw, path_backup, vendor);
 
 %% noise pre-whitening
 if ~isempty(rawdata_noise)

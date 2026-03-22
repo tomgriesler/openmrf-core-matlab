@@ -1,69 +1,34 @@
-function [ktraj_meas, ktraj_hash] = TRAJ_reco(path_raw_traj, path_backup_traj, vendor, plot_id)
+function [ktraj_meas, ktraj_hash] = TRAJ_reco(path_raw, path_backup, vendor, plot_id)
 
 % Author: Maximilian Gram, University Hospital Wuerzburg, Wuerzburg, Germany; V1, 09.03.2026
+% Author: Maximilian Gram, University Hospital Wuerzburg, Wuerzburg, Germany; V2, 22.03.2026; unify for different vendors
+
+% ----- Input -----
+% path_raw:    path of meas data or [] for select via uigetfile
+% path_backup: path of pulseq workspace backup; not necessary for Siemens
+% vendor:      vendor name
 
 %% load trajectory rawdata and pulseq backup
-
-switch vendor
-    case 'Siemens'
-        % load non-splitted data
-        if ~iscell(path_raw_traj)
-            [twix_obj, study_info, PULSEQ] = pulseq_read_meas_siemens(path_raw_traj, []);
-            rawdata = SPI_get_rawdata(twix_obj);    
-            clear twix_obj;
-        
-        % load splitted data
-        else
-            Nsplit    = numel(path_raw_traj);
-            rawdata_x = [];
-            rawdata_y = [];
-            for j = 1:Nsplit
-                if j==1
-                    [twix_obj, study_info, PULSEQ] = pulseq_read_meas_siemens(path_raw_traj{j}, []);
-                else
-                    twix_obj = pulseq_read_meas_siemens(path_raw_traj{j}, []);
-                end
-                    temp_rawdata = SPI_get_rawdata(twix_obj);            
-                    rawdata_x    = [rawdata_x; temp_rawdata(1:size(temp_rawdata,1)/2,:,:)];
-                    rawdata_y    = [rawdata_y; temp_rawdata(size(temp_rawdata,1)/2+1:end,:,:)];
-                    clear twix_obj temp_rawdata;
-            end
-            rawdata = [rawdata_x; rawdata_y];
-            clear Nsplit rawdata_x rawdata_y;
-        end
-        rawdata = permute(rawdata, [3, 1, 2]);
-
-    case 'GE' % for all other vendors, we still need routines...
-        load(path_raw_traj);
-        load(path_backup_traj);
-    
-    case 'UnitedImaging'
-        load(path_raw_traj);
-        load(path_backup_traj);
-    
-    case 'Philips'
-        load(path_raw_traj);
-        load(path_backup_traj);
-end
+[rawdata, ~, PULSEQ] = pulseq_read_meas(path_raw, path_backup, vendor);
 
 %% read dimensions
-Ncoils  = size(rawdata,1);  % number of coils
-NR      = PULSEQ.TRAJ.NR;   % number of spiral arms
-Nread   = size(rawdata, 3); % number of sampling points
-Nav     = PULSEQ.TRAJ.Nav;  % number of averages
+NCoils = size(rawdata,1);  % number of coils
+NR     = PULSEQ.TRAJ.NR;   % number of spiral arms
+NRead  = size(rawdata, 3); % number of sampling points
+Nav    = PULSEQ.TRAJ.Nav;  % number of averages
 
 %% Duyn method: 10.1006/jmre.1998.1396
 if strcmp(PULSEQ.TRAJ.method, 'duyn')
 
     % average traj data
-    rawdata = squeeze(mean(reshape(rawdata, Ncoils, Nav, [], Nread), 2));
+    rawdata = squeeze(mean(reshape(rawdata, NCoils, Nav, [], NRead), 2));
     
     % PCA coil compression: x slice
     rawdata_x = rawdata(:,1:size(rawdata,2)/2,:);
     rawdata_x = rawdata_x(:,:);
     [~, ~, pc]  = svd(rawdata_x.', 'econ');
     rawdata_x = pc.' * rawdata_x(:,:);
-    rawdata_x = reshape(rawdata_x, [Ncoils NR*2 Nread] );
+    rawdata_x = reshape(rawdata_x, [NCoils NR*2 NRead] );
     rawdata_x = squeeze(rawdata_x(1,:,:));
 
     % PCA coil compression: y slice
@@ -71,7 +36,7 @@ if strcmp(PULSEQ.TRAJ.method, 'duyn')
     rawdata_y = rawdata_y(:,:);
     [~, ~, pc]  = svd(rawdata_y.', 'econ');
     rawdata_y = pc.' * rawdata_y(:,:);
-    rawdata_y = reshape(rawdata_y, [Ncoils NR*2 Nread] );
+    rawdata_y = reshape(rawdata_y, [NCoils NR*2 NRead] );
     rawdata_y = squeeze(rawdata_y(1,:,:));
     clear pc rawdata;
 
@@ -122,14 +87,14 @@ if strcmp(PULSEQ.TRAJ.method, 'robison')
     clear rawdata temp_ind_x1 temp_ind_x2 temp_ind_x3 temp_ind_x4 temp_ind_y1 temp_ind_y2 temp_ind_y3 temp_ind_y4;
 
     % average data
-    rawdata_x1 = squeeze(mean(reshape(rawdata_x1, Ncoils, Nav, [], Nread), 2));
-    rawdata_x2 = squeeze(mean(reshape(rawdata_x2, Ncoils, Nav, [], Nread), 2));
-    rawdata_x3 = squeeze(mean(reshape(rawdata_x3, Ncoils, Nav, [], Nread), 2));
-    rawdata_x4 = squeeze(mean(reshape(rawdata_x4, Ncoils, Nav, [], Nread), 2));
-    rawdata_y1 = squeeze(mean(reshape(rawdata_y1, Ncoils, Nav, [], Nread), 2));
-    rawdata_y2 = squeeze(mean(reshape(rawdata_y2, Ncoils, Nav, [], Nread), 2));
-    rawdata_y3 = squeeze(mean(reshape(rawdata_y3, Ncoils, Nav, [], Nread), 2));
-    rawdata_y4 = squeeze(mean(reshape(rawdata_y4, Ncoils, Nav, [], Nread), 2));
+    rawdata_x1 = squeeze(mean(reshape(rawdata_x1, NCoils, Nav, [], NRead), 2));
+    rawdata_x2 = squeeze(mean(reshape(rawdata_x2, NCoils, Nav, [], NRead), 2));
+    rawdata_x3 = squeeze(mean(reshape(rawdata_x3, NCoils, Nav, [], NRead), 2));
+    rawdata_x4 = squeeze(mean(reshape(rawdata_x4, NCoils, Nav, [], NRead), 2));
+    rawdata_y1 = squeeze(mean(reshape(rawdata_y1, NCoils, Nav, [], NRead), 2));
+    rawdata_y2 = squeeze(mean(reshape(rawdata_y2, NCoils, Nav, [], NRead), 2));
+    rawdata_y3 = squeeze(mean(reshape(rawdata_y3, NCoils, Nav, [], NRead), 2));
+    rawdata_y4 = squeeze(mean(reshape(rawdata_y4, NCoils, Nav, [], NRead), 2));
 
     % PCA coil compression: x slice
     rawdata_x1 = rawdata_x1(:,:);
@@ -141,10 +106,10 @@ if strcmp(PULSEQ.TRAJ.method, 'robison')
     rawdata_x2 = pc.' * rawdata_x2(:,:);
     rawdata_x3 = pc.' * rawdata_x3(:,:);
     rawdata_x4 = pc.' * rawdata_x4(:,:);
-    rawdata_x1 = reshape(rawdata_x1, [Ncoils NR Nread] );
-    rawdata_x2 = reshape(rawdata_x2, [Ncoils NR Nread] );
-    rawdata_x3 = reshape(rawdata_x3, [Ncoils NR Nread] );
-    rawdata_x4 = reshape(rawdata_x4, [Ncoils NR Nread] );
+    rawdata_x1 = reshape(rawdata_x1, [NCoils NR NRead] );
+    rawdata_x2 = reshape(rawdata_x2, [NCoils NR NRead] );
+    rawdata_x3 = reshape(rawdata_x3, [NCoils NR NRead] );
+    rawdata_x4 = reshape(rawdata_x4, [NCoils NR NRead] );
     rawdata_x1 = squeeze(rawdata_x1(1,:,:));
     rawdata_x2 = squeeze(rawdata_x2(1,:,:));
     rawdata_x3 = squeeze(rawdata_x3(1,:,:));
@@ -161,10 +126,10 @@ if strcmp(PULSEQ.TRAJ.method, 'robison')
     rawdata_y2 = pc.' * rawdata_y2(:,:);
     rawdata_y3 = pc.' * rawdata_y3(:,:);
     rawdata_y4 = pc.' * rawdata_y4(:,:);
-    rawdata_y1 = reshape(rawdata_y1, [Ncoils NR Nread] );
-    rawdata_y2 = reshape(rawdata_y2, [Ncoils NR Nread] );
-    rawdata_y3 = reshape(rawdata_y3, [Ncoils NR Nread] );
-    rawdata_y4 = reshape(rawdata_y4, [Ncoils NR Nread] );
+    rawdata_y1 = reshape(rawdata_y1, [NCoils NR NRead] );
+    rawdata_y2 = reshape(rawdata_y2, [NCoils NR NRead] );
+    rawdata_y3 = reshape(rawdata_y3, [NCoils NR NRead] );
+    rawdata_y4 = reshape(rawdata_y4, [NCoils NR NRead] );
     rawdata_y1 = squeeze(rawdata_y1(1,:,:));
     rawdata_y2 = squeeze(rawdata_y2(1,:,:));
     rawdata_y3 = squeeze(rawdata_y3(1,:,:));
@@ -228,7 +193,7 @@ if NR==1
 end
 
 % get time axis
-Nread_meas = Nread;
+Nread_meas = NRead;
 Nread_calc = size(ktraj_calc_x,2); % if rewinder was acquired: Nread_meas > Nread_calc
 t_meas = (1:Nread_meas) *PULSEQ.TRAJ.adc.dwell *1e3;  % [ms] time with grad raster steps
 t_calc = (1:Nread_calc) *PULSEQ.PULSEQ_SPI.SPI.adc.dwell  *1e3;  % [ms] time with grad raster steps

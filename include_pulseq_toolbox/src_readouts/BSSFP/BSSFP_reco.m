@@ -1,75 +1,68 @@
-function [Images, PULSEQ, cmaps] = BSSFP_reco(study, cmaps)
+function [Images, PULSEQ, cmaps] = BSSFP_reco(path_raw, path_backup, vendor, cmaps, zero_params, mod_reco)
 
 % Author: Maximilian Gram, University Hospital Wuerzburg, Wuerzburg, Germany; V1, 09.03.2026
+% Author: Maximilian Gram, University Hospital Wuerzburg, Wuerzburg, Germany; V2, 22.03.2026; unify for different vendors
 
 % ----- Input -----
-% study:       enter path of study '.dat' or [] for dropdown select
+% path_raw:    path of meas data or [] for select via uigetfile
+% path_backup: path of pulseq workspace backup; not necessary for Siemens
+% vendor:      vendor name
 % cmaps:       enter [] for calculating cmaps via openadapt or espirit
 % zero_params: parameters for zero interpolation filling
 % mod_reco:    0 -> sqrt(sum(abs(coils).^2,1)),
 %              1 -> openadapt()
-%              2 -> espirit()
 
 % case: no input arguments
 if nargin==0
-    study       = [];
+    path_raw    = [];
+    path_backup = [];
+    vendor      = [];
     cmaps       = [];
+    zero_params = [];
+    mod_reco    = [];
 end
 
-
-
-% read study info and pulseq workspace
-[twix_obj, ~, PULSEQ] = pulseq_read_meas_siemens(study);
-load('backup_260225_1608_workspace.mat');
-%% import rawdata
-% if PULSEQ.BSSFP.os_mode == 1
-%     twix_obj.image.flagRemoveOS = 1;
-% end
-rawdata = squeeze(twix_obj.image());
-[Nread, ~, ~] = size(rawdata);
-
-%% reshape rawdata
-N_iNAV = PULSEQ.BSSFP.N_iNAV;
-N_rr   = PULSEQ.BSSFP.N_rr;
-N_segment = PULSEQ.BSSFP.N_segment;
-N_tot = N_iNAV + N_segment;
-NCoils = size(rawdata,2);    
-ksp_temp = zeros(Nread, NCoils, N_rr, N_segment);
-inav_reorderd = zeros(Nread, NCoils, N_rr, N_iNAV);
-for i = 1:N_rr
-    for j = 1:N_tot
-        if j > N_iNAV
-            ksp_temp(:, :, i, j-N_iNAV) = rawdata(:, :, (N_tot*(i-1)) + j);
-        elseif j <= N_iNAV
-            inav_reorderd(:, :, i, j) = rawdata(:, :, (N_tot*(i-1)) + j);
-        end
-    end
+% defaults
+if isempty(zero_params)
+    zero_params.onoff  = 1;
+    zero_params.radius = 6.0;
+    zero_params.factor = 2.0;
+end
+if isempty(mod_reco)
+    mod_reco = 1;
 end
 
-%% reorder kspace data
-traj = PULSEQ.BSSFP.caspr;
-traj_names = fieldnames(traj);
+% import rawdata, read study info and load pulseq workspace
+[rawdata, ~, PULSEQ, study_info] = pulseq_read_meas(path_raw, path_backup, vendor);
 
-ksp_reordered = zeros(Nread, NCoils, PULSEQ.FOV.Ny, PULSEQ.FOV.Nz);
+%% read dimensions
+[NCoils, ~, Nx] = size(rawdata);
+Ny = PULSEQ.FOV.Ny;
+Nz = PULSEQ.FOV.Nz;
 
-for i = 1:length(traj_names)
-    for j = 1:length(traj.(traj_names{i}))
-        seg_coord = traj.(traj_names{i});
-        ksp_reordered(:, :, seg_coord(j,1), seg_coord(j,2)) = ksp_temp(:, :, i, j);
-    end
+%% sort k-space
+kspace = zeros(Nz, NCoils, Ny, Nx);
+for nz = 1:Nz
+    temp = rawdata(:,(nz-1)*Ny+1:nz*Ny,:);
+    kspace(nz,:,:,:) = temp;
+end
+clear temp;
+kspace = permute(kspace, [2,1,3,4]);
+
+%% ifft reconstruction and coil combination
+images_coils = fftshift(fft(fft(fft(kspace, [], 4), [], 3), [], 2));
+
+if mod_reco==0
+    Images = squeeze(sqrt(sum(abs(images_coils).^2,1)));
+    cmaps  = [];
+else
+    [Images, cmaps] = openadapt(images_coils);
 end
 
-
-
-%% image reconstruction
-
-% ifft
-rawdata  = permute(ksp_reordered, [2, 1, 3, 4]);
-images = fftshift(fft(fft(fft(rawdata, [], 4), [], 3), [], 2));
-% calculate coil combined images
-% cmaps = ones(size(images));
-
-Images = squeeze(sqrt(sum(abs(images).^2,1)));
+%% zero filling
+if zero_params.onoff == 1
+    Images = mg_zero_filling(Images, zero_params);
+end
 
 end
 

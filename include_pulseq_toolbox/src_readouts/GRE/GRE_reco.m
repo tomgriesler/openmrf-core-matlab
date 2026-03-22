@@ -1,9 +1,12 @@
-function [Images, PULSEQ, study_info, cmaps, f0] = GRE_reco(study, cmaps, zero_params, mod_reco)
+function [Images, PULSEQ, study_info, cmaps] = GRE_reco(path_raw, path_backup, vendor, cmaps, zero_params, mod_reco)
 
 % Author: Maximilian Gram, University Hospital Wuerzburg, Wuerzburg, Germany; V1, 09.03.2026
+% Author: Maximilian Gram, University Hospital Wuerzburg, Wuerzburg, Germany; V2, 22.03.2026; unify for different vendors
 
 % ----- Input -----
-% study:       enter path of study '.dat' or [] for dropdown select
+% path_raw:    path of meas data or [] for select via uigetfile
+% path_backup: path of pulseq workspace backup; not necessary for Siemens
+% vendor:      vendor name
 % cmaps:       enter [] for calculating cmaps via openadapt or espirit
 % zero_params: parameters for zero interpolation filling
 % mod_reco:    0 -> sqrt(sum(abs(coils).^2,1)),
@@ -12,7 +15,9 @@ function [Images, PULSEQ, study_info, cmaps, f0] = GRE_reco(study, cmaps, zero_p
 
 % case: no input arguments
 if nargin==0
-    study       = [];
+    path_raw    = [];
+    path_backup = [];
+    vendor      = [];
     cmaps       = [];
     zero_params = [];
     mod_reco    = [];
@@ -28,39 +33,35 @@ if isempty(mod_reco)
     mod_reco = 2;
 end
 
-% read study info and pulseq workspace
-[twix_obj, study_info, PULSEQ] = pulseq_read_meas_siemens(study);
+% import rawdata, read study info and load pulseq workspace
+[rawdata, ~, PULSEQ, study_info] = pulseq_read_meas(path_raw, path_backup, vendor);
 
 %% read parameters for reconstruction
 NImages = PULSEQ.GRE.n_TEs;
 NRep    = PULSEQ.GRE.n_rep;
 os_mode = PULSEQ.GRE.os_mode;
 
-%% import rawdata
+%% remove oversampling
 if os_mode == 1
-    twix_obj.image.flagRemoveOS = 1;
+    rawdata = (rawdata(:,:,1:2:end) + rawdata(:,:,2:2:end)) / 2;
 end
-rawdata = squeeze(twix_obj.image());
-f0      = study_info.f0;
 
 %% reshape rawdata
-if NImages==1 && NRep==1
-    Nx     = size(rawdata,1);
-    NCoils = size(rawdata,2);    
-    Ny     = size(rawdata,3);
-    temp   = double(permute(rawdata, [2,3,1]));
-    kSpace_raw(1,:,:,:) = temp(:,:,:);
-    clear temp;
+if NImages==1 && NRep==1    
+    NCoils = size(rawdata,1);    
+    Ny     = size(rawdata,2);
+    Nx     = size(rawdata,3);
+    kSpace_raw(1,:,:,:) = rawdata(:,:,:);
 end
 
-if NImages>1 || NRep>1
-    Nx         = size(rawdata,1);
-    NCoils     = size(rawdata,2);
-    Ny         = size(rawdata,3)/NImages/NRep;
+if NImages>1 || NRep>1    
+    NCoils     = size(rawdata,1);
+    Ny         = size(rawdata,2)/NImages/NRep;
+    Nx         = size(rawdata,3);
     kSpace_raw = zeros(NImages*NRep,NCoils,Ny,Nx);
     for nc = 1:NCoils
     for x  = 1:Nx
-        temp = double(squeeze(rawdata(x,nc,:)));
+        temp = double(squeeze(rawdata(nc,:,x)));
         temp = reshape(temp,[Ny,NImages*NRep]);
         for ni = 1:NImages*NRep
             kSpace_raw(ni,nc,:,x) = squeeze(temp(:,ni));
@@ -69,6 +70,7 @@ if NImages>1 || NRep>1
     end
     clear temp nc x ni;
 end
+clear rawdata;
 
 %% mean(image repetitions)
 if NRep>1

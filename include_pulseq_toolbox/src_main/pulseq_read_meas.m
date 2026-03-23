@@ -38,24 +38,6 @@ function [rawdata, noise, PULSEQ, study_info] = pulseq_read_meas(path_raw, path_
         clear temp_name temp_path;
     end
 
-    % check file extension
-    path_raw = strrep(path_raw, '\', '/');
-    [~, temp_name, temp_ext] = fileparts(path_raw);
-    if isempty(temp_ext)
-        error(['sepcifiy file extension for: ' temp_name]);
-    end
-    clear temp_name temp_ext;
-    
-    % check file extension
-    if ~isempty(path_backup)
-        path_backup = strrep(path_backup, '\', '/');
-        [~, ~, temp_ext] = fileparts(path_backup);
-        if isempty(temp_ext)
-            error(['sepcifiy file extension for: ' path_backup]);
-        end
-        clear temp_ext;
-    end
-
     %% load rawdata and pulseq backups depending on vendor
     switch vendor
         case 'Siemens' % Siemens Healthcare
@@ -67,7 +49,7 @@ function [rawdata, noise, PULSEQ, study_info] = pulseq_read_meas(path_raw, path_
             end            
 
         case 'UI' % United Imaging Healthcare
-            [rawdata, study_info, PULSEQ] = pulseq_read_meas_UI(path_mat);
+            [rawdata, study_info, PULSEQ] = pulseq_read_meas_UI(path_raw);
             rawdata = (rawdata(:,:,1:2:end) + rawdata(:,:,2:2:end)) / 2; % remove oversampling
             if ~isempty(path_backup)
                 load(path_backup);
@@ -75,14 +57,14 @@ function [rawdata, noise, PULSEQ, study_info] = pulseq_read_meas(path_raw, path_
             end
 
         case 'GE' % General Electric
-            [rawdata, study_info, PULSEQ] = pulseq_read_meas_GE(path_mat); % to do
+            [rawdata, study_info, PULSEQ] = pulseq_read_meas_GE(path_raw); % to do
             if ~isempty(path_backup)
                 load(path_backup);
                 warning('automatic PULSEQ backup was overwritten for GE scan!');
             end
 
         case 'Philips' % Koninklijke Philips
-            [rawdata, study_info, PULSEQ] = pulseq_read_meas_Philips(path_mat); % to do
+            [rawdata, study_info, PULSEQ] = pulseq_read_meas_Philips(path_raw); % to do
             if ~isempty(path_backup)
                 load(path_backup);
                 warning('automatic PULSEQ backup was overwritten for Philips scan!');

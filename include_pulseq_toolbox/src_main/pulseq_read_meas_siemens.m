@@ -1,9 +1,10 @@
-function [twix_obj, study_info, PULSEQ] = pulseq_read_twix_siemens(study)
+function [twix_obj, study_info, PULSEQ] = pulseq_read_meas_siemens(study)
 
 % Author: Maximilian Gram, University Hospital Wuerzburg, Wuerzburg, Germany; V1, 09.03.2026
-% Author: Maximilian Gram, University Hospital Wuerzburg, Wuerzburg, Germany; V1, 22.03.2026
+% Author: Maximilian Gram, University Hospital Wuerzburg, Wuerzburg, Germany; V2, 22.03.2026
 
 %% check for file existence and emit clear exception upon missing file
+study = strrep(study, '\', '/');
 checkexists(study, file_qualifier='scanner raw data');
 
 %% Read Siemens meas file from VB/VD MRI raw data
@@ -59,7 +60,7 @@ end
 
 % compare md5 hash
 if isfield(PULSEQ, 'md5_hash')
-    if md5_hash ~= PULSEQ.md5_hash
+    if ~strcmp(md5_hash, PULSEQ.md5_hash)
         warning(' >>>>> MD5 Hashs do not agree! <<<<<')
     end
 else

@@ -59,28 +59,34 @@ function [rawdata, noise, PULSEQ, study_info] = pulseq_read_meas(path_raw, path_
     %% load rawdata and pulseq backups depending on vendor
     switch vendor
         case 'Siemens' % for Siemens, we can automatically link rawdata and pulseq backups
-            [twix_obj, study_info, PULSEQ] = pulseq_read_twix_siemens(path_raw);
-            rawdata = twix_obj.image.unsorted();
-            rawdata = permute(rawdata, [2, 3, 1]); % coils x tr x adc
+            [twix_obj, study_info, PULSEQ] = pulseq_read_meas_siemens(path_raw);
+            rawdata = permute(twix_obj.image.unsorted(), [2, 3, 1]); % coils x tr x adc
             if ~isempty(path_backup)
                 load(path_backup);
                 warning('automatic PULSEQ backup was overwritten for Siemens scan!');
             end            
-    
-        case 'GE' % for all other vendors, we still need routines...
-            load(path_raw);
-            load(path_backup);
-            study_info.time_stamps = time_stamps;
-        
+
         case 'UnitedImaging'
-            load(path_raw); 
-            load(path_backup);
-            study_info.time_stamps = time_stamps;
-        
+            [rawdata, study_info, PULSEQ] = pulseq_read_meas_united_imaging(path_mat);
+            rawdata = (rawdata(:,:,1:2:end) + rawdata(:,:,2:2:end)) / 2; % remove oversampling
+            if ~isempty(path_backup)
+                load(path_backup);
+                warning('automatic PULSEQ backup was overwritten for United Imaging scan!');
+            end
+
+        case 'GE'
+            [rawdata, study_info, PULSEQ] = pulseq_read_meas_ge(path_mat); % to do
+            if ~isempty(path_backup)
+                load(path_backup);
+                warning('automatic PULSEQ backup was overwritten for GE scan!');
+            end
+
         case 'Philips'
-            load(path_raw);
-            load(path_backup);
-            study_info.time_stamps = time_stamps;
+            [rawdata, study_info, PULSEQ] = pulseq_read_meas_philips(path_mat); % to do
+            if ~isempty(path_backup)
+                load(path_backup);
+                warning('automatic PULSEQ backup was overwritten for Philips scan!');
+            end    
     end
 
     %% split meas data and noise pre-scans

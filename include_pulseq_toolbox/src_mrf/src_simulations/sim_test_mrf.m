@@ -9,6 +9,7 @@ seq_file = 'test_cmrf.seq';
                                 [], ...       % soft delays
                                 [], ...       % kz part
                                 [], ...       % echo mode
+								[]; ...       % adc padding
                                 1e-6, ...     % simulation raster time
                                 0);           % plot flag
 

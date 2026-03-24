@@ -1,4 +1,4 @@
-function h = safe_plot(pns, gwr, dt)
+function h = safe_plot(pns, gwr, dt, slice_orientation)
 %SAFE_PLOT
 %   Subplot 1–3: axis stimulation (X/Y/Z) + axis max + global ||p||
 %   Subplot 4: Gx/Gy/Gz gradients
@@ -8,6 +8,10 @@ function h = safe_plot(pns, gwr, dt)
 %   dt       : [s]
 %
 % author: Maximilian Gram; University of Wuerzburg; 20.02.2026
+
+if strcmp(slice_orientation, 'all')
+    slice_orientation = 'axial  |  coronal  | sagittal';
+end
 
 N = size(pns,1);
 t = (0:N-1) * dt * 1000; % ms
@@ -50,8 +54,8 @@ for k = 1:3
     % remove x-axis labels & ticks to save space
     ax.XTickLabel = [];
 
-    if k == 1
-        title(ax, sprintf('Predicted PNS (global max ||p|| = %.0f%%)', pGlob));
+    if k == 1        
+        title(ax, ['Predicted PNS (global max ||p|| = ' num2str(round(pGlob,1)) '%  ->  ' slice_orientation]);
     end
 
     h.leg(k) = legend(ax, ...

@@ -60,11 +60,18 @@ if nargin<2
 end
 if isstr(slice_orientation)
     if strcmp(slice_orientation, 'axial')
-        rot_mat = [1 0 0; 0 1 0; 0 0 1];
+        gwr = ([1 0 0; 0 1 0; 0 0 1] * gwr')';
     elseif strcmp(slice_orientation, 'coronal')
-        rot_mat = [1 0 0; 0 0 -1; 0 1 0];
+        gwr = ([1 0 0; 0 0 1; 0 1 0] * gwr')';
     elseif strcmp(slice_orientation, 'sagittal')
-        rot_mat = [0 -1 0; 1 0 0; 0 0 1];
+        gwr = ([0 0 1; 0 1 0; 1 0 0] * gwr')';
+    elseif strcmp(slice_orientation, 'all')
+        gwr = [ ([1 0 0; 0 1 0; 0 0 1] * gwr')'; ...
+                zeros(round(1/obj.gradRasterTime), 3); ...
+                ([1 0 0; 0 0 1; 0 1 0] * gwr')'; ...
+                zeros(round(1/obj.gradRasterTime), 3); ...
+                ([0 0 1; 0 1 0; 1 0 0] * gwr')' ];
+        t_axis = (1:size(gwr,1)) * obj.gradRasterTime;
     else
         error('unknown slice orientation');
     end
@@ -73,23 +80,10 @@ else
     b = slice_orientation(2);
     c = slice_orientation(3);
     rot_mat = [1 0 0; 0 cos(a) -sin(a); 0 sin(a) cos(a)] * [cos(b) 0 sin(b); 0 1 0; -sin(b) 0 cos(b)] * [cos(c) -sin(c) 0; sin(c) cos(c) 0; 0 0 1];
+    gwr     = (rot_mat * gwr')';
     clear a b c;
+    slice_orientation = 'oblique';
 end
-
-% M. Gram rotate gradients and plot
-gwr = (rot_mat*gwr')';
-% figure();
-% hold on
-% plot(t_axis *1e3, 2*pi*gwr(:,1)/2.67522/1e8*1e3)
-% plot(t_axis *1e3, 2*pi*gwr(:,2)/2.67522/1e8*1e3)
-% plot(t_axis *1e3, 2*pi*gwr(:,3)/2.67522/1e8*1e3)
-% title('gradient wave form');
-% xlabel('time [ms]')
-% ylabel('physical gradients mT/m]')
-% yline( 2*pi*obj.sys.maxGrad/2.67522/1e8*1e3, 'k--', 'LineWidth', 2)
-% yline(-2*pi*obj.sys.maxGrad/2.67522/1e8*1e3, 'k--', 'LineWidth', 2)
-% legend('x', 'y', 'z')
-% hold off;
 
 if ischar(hardware)
     % this loads the parameters from the provided text file
@@ -107,7 +101,7 @@ ok=all(pns_norm<1);
 % ready
 if doPlots
     % plot results
-    safe_plot(pns_comp'*100, gwr, obj.gradRasterTime);
+    safe_plot(pns_comp'*100, gwr, obj.gradRasterTime, slice_orientation);
 end
 
 end

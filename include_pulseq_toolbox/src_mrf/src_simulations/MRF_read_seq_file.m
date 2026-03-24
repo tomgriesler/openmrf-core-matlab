@@ -1,4 +1,4 @@
-function [SEQ, SIM] = MRF_read_seq_file(seq_file, f0, time_stamps, soft_delays, flag_kz, echo_mode, dt, flag_plot)
+function [SEQ, SIM] = MRF_read_seq_file(seq_file, f0, time_stamps, soft_delays, flag_kz, echo_mode, adc_npad, dt, flag_plot)
 
 % Author: Maximilian Gram, University Hospital Wuerzburg, Wuerzburg, Germany; V1, 09.03.2026
 % comment regarding pulseq version: with v1.5.1 it is possible to define rotation objects
@@ -13,6 +13,7 @@ function [SEQ, SIM] = MRF_read_seq_file(seq_file, f0, time_stamps, soft_delays, 
 % soft_delays:     n x 1 array of input delays (e.g. for RR tuning)
 % flag_kz:         0 -> no kz paritions; 1 -> search for START/STOP labels and remove unneccesary kz partitions
 % echo_mode:       'spiral_out' 'center' 'auto'
+% adc_npad:        can be 2x1 or 1x1 and defines the start and end of adc padding
 % dt:              target raster time for the simulation (default 1us)
 % flag_plot:       0 -> off; 1 -> calc full waveform arrays; 2 -> plot
 
@@ -71,9 +72,12 @@ if nargin<6
     echo_mode = [];
 end
 if nargin<7
-    dt = [];
+    adc_npad = [];
 end
 if nargin<8
+    dt = [];
+end
+if nargin<9
     flag_plot = [];
 end
 if isempty(f0)
@@ -120,7 +124,7 @@ SEQ = delete_unnecessary_blocks(SEQ);            % delete blocks before first RF
 SEQ = calc_block_waveforms(SEQ);
 
 %% find echo positions within ADCs -> used for signal simulation
-SEQ = find_echo_positions(SEQ, echo_mode);
+SEQ = find_echo_positions(SEQ, echo_mode, adc_npad);
 
 %% calculate full waveform arrays
 if flag_plot>0
@@ -784,7 +788,7 @@ end
 end
 
 %% -------------------- find echo positions --------------------
-function SEQ = find_echo_positions(SEQ, echo_mode)
+function SEQ = find_echo_positions(SEQ, echo_mode, adc_npad)
 
     % this functions searches for echo positions within the ADCs
     % select echo mode:
@@ -805,6 +809,9 @@ function SEQ = find_echo_positions(SEQ, echo_mode)
                     temp_adc   = SEQ.WAVES(j).ADC_ON_OFF;
                     temp_start = find(temp_adc==1);
                     temp_start = temp_start(1);
+                    if ~isempty(adc_npad)
+                        temp_start = temp_start + adc_npad;
+                    end                    
                     temp_adc   = temp_adc*0;
                     temp_adc(temp_start) = 1;
                     SEQ.WAVES(j).ADC_SIM = temp_adc;

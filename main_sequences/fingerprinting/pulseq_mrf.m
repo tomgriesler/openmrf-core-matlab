@@ -8,10 +8,10 @@ flag_report = 0; % 0: off,  1: only timings, 2: full report (slow)
 flag_pns    = 0; % 0: off,  1: simulate PNS stimulation
 
 % optional: select scanner
-% pulseq_scanner = 'Siemens_Sola_1,5T_MIITT';
+pulseq_scanner = 'Siemens_Sola_1,5T_MIITT';
 
 % optional: select pns sim orientation
-% pns_orientation = 'coronal';
+% pns_orientation = 'all';
 
 % init system, seq object and load pulseq user information
 pulseq_init();

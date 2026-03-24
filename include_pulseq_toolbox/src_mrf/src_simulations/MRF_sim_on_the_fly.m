@@ -15,7 +15,7 @@ if exist(external_path, 'file')==0
 end
 
 %% read .seq file
-[~, SIM] = MRF_read_seq_file(external_path, 128*1e6, zeros(1000,1), zeros(1000,1), [], 'spiral_out', 1e-6, 0);
+[~, SIM] = MRF_read_seq_file(external_path, 128*1e6, zeros(1000,1), zeros(1000,1), [], 'spiral_out', [], 1e-6, 0);
  
 %% dictionary parameters
 P.T1  = [5000; 1000; 150] *1e-3;

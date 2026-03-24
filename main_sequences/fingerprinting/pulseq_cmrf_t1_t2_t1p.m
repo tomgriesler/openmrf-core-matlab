@@ -1,6 +1,6 @@
 %% init pulseq
 clear
-seq_name = 'cardiac_mrf';
+seq_name = 'cmrf_t1_t2_t1p';
 
 % main flags
 flag_backup = 0; % 0: off,  1: only backup,  2: backup and send .seq
@@ -8,17 +8,17 @@ flag_report = 0; % 0: off,  1: only timings, 2: full report (slow)
 flag_pns    = 0; % 0: off,  1: simulate PNS stimulation
 
 % optional: select scanner
-% pulseq_scanner = 'Siemens_Sola_1,5T_MIITT';
+pulseq_scanner = 'Siemens_Sola_1,5T_MIITT';
 
 % optional: select pns sim orientation
-% pns_orientation = 'coronal';
+% pns_orientation = 'all';
 
 % init system, seq object and load pulseq user information
 pulseq_init();
 
 %% FOV geometry
 FOV.Nxy    = 192;         % [ ] matrix size
-FOV.fov_xy = 300  *1e-3;  % [m] FOV geometry
+FOV.fov_xy = 320  *1e-3;  % [m] FOV geometry
 FOV.dz     = 8   *1e-3;   % [m] slice thickness
 FOV_init();
 
@@ -32,23 +32,23 @@ FOV_init();
 % 'SL'         ->  use for T1p encoding
 % 'MLEV'       ->  use for T2 or T2p encoding
 
-MRF.enc_list = { % the following encoding list is only an example which includes all possible preparations
+MRF.enc_list = {
 'Inversion';
 'No_Prep';
 'T2';
 'T2';
 'Inversion';
-'Saturation';
+'No_Prep';
 'SL';
 'SL';
 'Inversion';
-'Saturation';
 'No_Prep';
-'No_Prep';
+'T2';
+'T2';
 'Inversion';
 'No_Prep';
-'MLEV';
-'MLEV'
+'SL';
+'SL'
 };
 
 MRF.n_segm = numel(MRF.enc_list);
@@ -60,13 +60,6 @@ MRF.TRs    = 0.0 *1e-3 *ones(MRF.NR,1);  % minimize TRs
 MRF.FA_min = 4 *pi/180;                  % [rad] minimum flip angle
 MRF.FA_max = 15 *pi/180;                 % [rad] minimum flip angle
 MRF.FAs    = MRF_calc_FAs_sin_rand(MRF.FA_min, MRF.FA_max, MRF.nr, MRF.n_segm);
-
-% or use constant FAs
-% MRF.FAs = 15*pi/180 * ones(MRF.NR,1);
-
-% or import from .mat file
-% load('FAs.mat');
-% MRF.FAs = FAs;
 
 %% params: Spiral Readouts
 
@@ -81,16 +74,16 @@ SPI.mrf_import.FAs = MRF.FAs;   % [rad] flip angles
 % slice excitation
 SPI.exc_mode      = 'sinc';      % 'sinc' or 'sigpy_SLR'
 SPI.exc_shape     = 'ex';        % only for sigpy: 'st' or 'ex' 
-SPI.exc_time      = 0.8 *1e-3;   % [s] excitation time
+SPI.exc_time      = 0.5 *1e-3;   % [s] excitation time
 SPI.exc_tbw       = 2;           % [ ] time bandwidth product
 SPI.exc_fa_mode   = 'import';    % 'equal',  'ramped',  'import'  
-SPI.reph_duration = 0.6 *1e-3;   % [s] slice rephaser duration
+SPI.reph_duration = 0.3 *1e-3;   % [s] slice rephaser duration
 
 % params: gradient spoiling & rf spoiling
 SPI.spoil_nTwist   = 4;           % [ ] number of 2pi twist in slice
 SPI.spoil_rf_mode  = 'lin';       % 'lin' or 'quad'
 SPI.spoil_rf_inc   = 0 *pi/180;   % [rad] rf phase increment
-SPI.spoil_duration = 1.0 *1e-3;  % [s] slice spoiler duration
+SPI.spoil_duration = 0.5 *1e-3;  % [s] slice spoiler duration
 
 % k-space geometry params
 SPI.geo.design        = 'spiral';
@@ -106,13 +99,13 @@ SPI.proj.mode = 'RoundGoldenAngle'; % 'Equal2Pi' 'RoundGoldenAngle'
 SPI.proj.Nid  = 48; % number of identical/unique projections
 
 % gradient & slew rate limitation factors
-SPI.lim_exc_slew   = 0.9; % slice excitation
-SPI.lim_reph_grad  = 0.9; % slice rephasing
-SPI.lim_reph_slew  = 0.6; % slice rephasing
-SPI.lim_read_grad  = 0.9; % readout
-SPI.lim_read_slew  = 0.7; % readout
-SPI.lim_spoil_grad = 0.9; % slice spoiling
-SPI.lim_spoil_slew = 0.6; % slice spoiling
+SPI.lim_exc_slew   = 0.95; % slice excitation
+SPI.lim_reph_grad  = 0.95; % slice rephasing
+SPI.lim_reph_slew  = 0.95; % slice rephasing
+SPI.lim_read_grad  = 0.90; % readout
+SPI.lim_read_slew  = 0.55; % readout
+SPI.lim_spoil_grad = 0.95; % slice spoiling
+SPI.lim_spoil_slew = 0.95; % slice spoiling
 
 [SPI, ktraj_ref] = SPI_init(SPI, FOV, system, 1);
 MRF.TRs = SPI.TR;
@@ -122,19 +115,8 @@ INV.rf_type      = 'HYPSEC_inversion';
 INV.tExc         = 10 *1e-3;  % [s]  hypsech pulse duration
 INV.beta         = 700;       % [Hz] maximum rf peak amplitude
 INV.mu           = 4.9;       % [ ]  determines amplitude of frequency sweep
-INV.inv_rec_time = [15 75 150 250] *1e-3;
+INV.inv_rec_time = [0.01 35 380 130] *1e-3;
 INV = INV_init(INV, FOV, system);
-
-%% params: Saturation
-SAT.mode         = 'on';
-SAT.rf_type      = 'adiabatic_BIR4';
-SAT.bir4_tau     = 10 *1e-3;  % [s]  bir4 pulse duration
-SAT.bir4_f1      = 640;       % [Hz] maximum rf peak amplitude
-SAT.bir4_beta    = 10;        % [ ]  am waveform parameter
-SAT.bir4_kappa   = atan(10);  % [ ]  fm waveform parameter
-SAT.bir4_dw0     = 30000;     % [rad/s] fm waveform scaling
-SAT.sat_rec_time = [100 200] *1e-3; % [s] saturation times
-SAT = SAT_init(SAT, FOV, system);
 
 %% params: T2 preparation
 T2.exc_mode   = 'adiabatic_BIR4';
@@ -144,16 +126,16 @@ T2.bir4_f1    = 640;       % [Hz] maximum rf peak amplitude
 T2.bir4_beta  = 10;        % [ ]  am waveform parameter
 T2.bir4_kappa = atan(10);  % [ ]  fm waveform parameter
 T2.bir4_dw0   = 30000;     % [rad/s] fm waveform scaling
-T2.prep_times = [40 80] * 1e-3;  % [s] inversion times
+T2.prep_times = [40 80 40 80] * 1e-3;  % [s] inversion times
 T2            = T2_init(T2, FOV, system);
 
 %% params: Spin-Lock
 
 % spin-lock pulses
-SL.relax_type = {'T1p'};         % T1p or T2p or T2
-SL.seq_type   = {'BSL'};         % BSL or CSL or RESL
-SL.tSL        = [40 80] *1e-3;   % [s]  SL time
-SL.fSL        = [200 200];       % [Hz] SL amplitude
+SL.relax_type = {'T1p'};                  % T1p or T2p or T2
+SL.seq_type   = {'BSL'};                  % BSL or CSL or RESL
+SL.tSL        = [40 80 40 80] *1e-3;      % [s]  SL time
+SL.fSL        = 300 * ones(size(SL.tSL)); % [Hz] SL amplitude
 
 % excitation pulses
 SL.exc_mode  = 'adiabatic_AHP';  % 'adiabatic_AHP', 'sinc', 'sigpy_SLR' or 'bp'
@@ -165,13 +147,6 @@ SL.rfc_mode = 'bp';              % 'bp', 'sinc', 'sigpy_SLR' or 'comp'
 SL.rfc_time = 1.0 *1e-3;         % [s] refocusing time
 
 SL = SL_init(SL, FOV, system);
-
-%% params: MLEV T2p preparation
-MLEV.n_mlev   = [4 8];           % number of MLEV4 preps
-MLEV.fSL      = 250;             % [Hz] eff spin-lock field strength
-MLEV.t_inter  = 1 *1e-5;         % [s]  inter pulse delay for T2 preparation
-MLEV.exc_mode = 'adiabatic_AHP'; % 'adiabatic_BIR4' or 'adiabatic_AHP'
-MLEV = MLEV_init(MLEV, FOV, system);
 
 %% params: Fat Saturation
 FAT.mode = 'on';
@@ -187,7 +162,7 @@ MRF_adjust_segment_delays();
 % on:  Cardiac
 % off: Abdominal or Phantom
 
-MRF.mode_trig = 'off';
+MRF.mode_trig = 'on';
 
 % calc fixed segment timings
 MRF.acq_duration      = sum(SPI.TR(1:MRF.nr));

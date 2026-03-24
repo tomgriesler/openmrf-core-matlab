@@ -13,6 +13,8 @@ f0         = PULSEQ.system.B0 * PULSEQ.system.gamma;
                                 [], ...       % soft delays
                                 [], ...       % kz part
                                 [], ...       % echo mode
+								[], ...       % adc padding
+								[], ...       % adc dwell time
                                 1e-6, ...     % simulation raster time
                                 0);           % plot flag
 

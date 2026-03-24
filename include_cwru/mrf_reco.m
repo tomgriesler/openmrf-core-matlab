@@ -46,6 +46,7 @@ end
                                 params_dict.flag_kz, ...      % find kz partitions for stacked 3D MRF -> eliminate unnecessary partitions
                                 params_dict.echo_mode, ...    % echo mode; default: 'spiral_out'
                                 PULSEQ.SPI.adcNPad,...        % adc padding
+                                PULSEQ.SPI.adc.dwell,...      % adc dwell time
                                 1e-6, ...                     % raster time for the simulation 
                                 0);                           % flag_plot
 

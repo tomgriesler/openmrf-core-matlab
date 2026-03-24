@@ -1,4 +1,4 @@
-function [SEQ, SIM] = MRF_read_seq_file(seq_file, f0, time_stamps, soft_delays, flag_kz, echo_mode, adc_npad, dt, flag_plot)
+function [SEQ, SIM] = MRF_read_seq_file(seq_file, f0, time_stamps, soft_delays, flag_kz, echo_mode, adc_npad, dwell_time, dt, flag_plot)
 
 % Author: Maximilian Gram, University Hospital Wuerzburg, Wuerzburg, Germany; V1, 09.03.2026
 % comment regarding pulseq version: with v1.5.1 it is possible to define rotation objects
@@ -14,6 +14,7 @@ function [SEQ, SIM] = MRF_read_seq_file(seq_file, f0, time_stamps, soft_delays, 
 % flag_kz:         0 -> no kz paritions; 1 -> search for START/STOP labels and remove unneccesary kz partitions
 % echo_mode:       'spiral_out' 'center' 'auto'
 % adc_npad:        can be 2x1 or 1x1 and defines the start and end of adc padding
+% dwell_time:      dwell time of adc [s]
 % dt:              target raster time for the simulation (default 1us)
 % flag_plot:       0 -> off; 1 -> calc full waveform arrays; 2 -> plot
 
@@ -75,9 +76,12 @@ if nargin<7
     adc_npad = [];
 end
 if nargin<8
-    dt = [];
+    dwell_time = [];
 end
 if nargin<9
+    dt = [];
+end
+if nargin<10
     flag_plot = [];
 end
 if isempty(f0)
@@ -124,6 +128,10 @@ SEQ = delete_unnecessary_blocks(SEQ);            % delete blocks before first RF
 SEQ = calc_block_waveforms(SEQ);
 
 %% find echo positions within ADCs -> used for signal simulation
+if ~isempty(adc_npad) && isempty(dwell_time)
+    error('enter dwell_time to correct adc padding');
+end
+adc_npad = round(adc_npad * dwell_time / dt);
 SEQ = find_echo_positions(SEQ, echo_mode, adc_npad);
 
 %% calculate full waveform arrays
@@ -810,7 +818,7 @@ function SEQ = find_echo_positions(SEQ, echo_mode, adc_npad)
                     temp_start = find(temp_adc==1);
                     temp_start = temp_start(1);
                     if ~isempty(adc_npad)
-                        temp_start = temp_start + adc_npad;
+                        temp_start = temp_start + adc_npad(1);
                     end                    
                     temp_adc   = temp_adc*0;
                     temp_adc(temp_start) = 1;

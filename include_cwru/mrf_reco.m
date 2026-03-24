@@ -39,16 +39,16 @@ if isempty(params_dict.seq_path)
     params_dict.seq_path = [params_dict.seq_path '/Pulseq_Workspace/' PULSEQ.pulseq_user '/' PULSEQ.seq_id(1:6) '/' PULSEQ.seq_id '/' PULSEQ.seq_name '.seq' ];
 end
 
-[SEQ, SIM] = MRF_read_seq_file( params_dict.seq_path, ...     % path of the original .seq file which was measured
-                                params_dict.f0, ...           % larmor frequency f0; required to simulate rf pulses with ppm freq offsets
-                                params_dict.time_stamps, ...  % adc times stamps; used for correction of trigger delays
-                                params_dict.soft_delays,...   % soft delay input; used for correction of sequence timings
-                                params_dict.flag_kz, ...      % find kz partitions for stacked 3D MRF -> eliminate unnecessary partitions
-                                params_dict.echo_mode, ...    % echo mode; default: 'spiral_out'
-                                PULSEQ.SPI.adcNPad,...        % adc padding
-                                PULSEQ.SPI.adc.dwell,...      % adc dwell time
-                                1e-6, ...                     % raster time for the simulation 
-                                0);                           % flag_plot
+[~, SIM] = MRF_read_seq_file( params_dict.seq_path, ...     % path of the original .seq file which was measured
+                              params_dict.f0, ...           % larmor frequency f0; required to simulate rf pulses with ppm freq offsets
+                              params_dict.time_stamps, ...  % adc times stamps; used for correction of trigger delays
+                              params_dict.soft_delays,...   % soft delay input; used for correction of sequence timings
+                              params_dict.flag_kz, ...      % find kz partitions for stacked 3D MRF -> eliminate unnecessary partitions
+                              params_dict.echo_mode, ...    % echo mode; default: 'spiral_out'
+                              PULSEQ.SPI.adcNPad,...        % adc padding
+                              PULSEQ.SPI.adc.dwell,...      % adc dwell time
+                              1e-6, ...                     % raster time for the simulation 
+                              0);                           % flag_plot
 
 %% caclulate dictionary
 switch params_dict.sim_mode

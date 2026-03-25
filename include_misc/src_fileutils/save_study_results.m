@@ -1,5 +1,6 @@
 function fullpath = save_study_results(res, varargin)
-%SAVE_STUDY_RESULTS Save reconstruction outputs to a MAT file.
+% SAVE_STUDY_RESULTS Save reconstruction outputs to a MAT file.
+% Author: Tom Griesler, University of Michigan. v1, 03/25/2026
 %
 % Usage:
 %   save_study_results(res)

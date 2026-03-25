@@ -43,7 +43,7 @@ SPI.exc_flipangle = 20 *pi/180;  % [rad] const FA or start of FA ramp -> set [] 
 SPI.reph_duration = 1.5 *1e-3;   % [s] slice rephaser duration
 
 % params: gradient spoiling & rf spoiling
-SPI.spoil_nTwist   = 8;           % [ ] number of 2pi twist in slice
+SPI.spoil_nTwist   = 8 * FOV.Nz;  % [ ] number of 2pi twist in slice
 SPI.spoil_rf_mode  = 'quad';      % 'lin' or 'quad'
 SPI.spoil_rf_inc   = 117 *pi/180; % [rad] rf phase increment
 SPI.spoil_duration = 3.0 *1e-3;   % [s] slice spoiler duration

@@ -28,7 +28,7 @@ SPI.exc_fa_mode   = 'equal';    % 'equal',  'ramped',  'mrf'
 SPI.exc_flipangle = 20 *pi/180; % [rad] const FA or start of FA ramp -> set [] for auto mode
 
 % params: gradient spoiling & rf spoiling
-SPI.spoil_nTwist  = 8;           % [ ] number of 2pi twist in slice
+SPI.spoil_nTwist  = 8 * FOV.Nz;  % [ ] number of 2pi twist in slice
 SPI.spoil_rf_mode = 'lin';       % 'lin' or 'quad'
 SPI.spoil_rf_inc  = 117 *pi/180; % [rad] rf phase increment
 

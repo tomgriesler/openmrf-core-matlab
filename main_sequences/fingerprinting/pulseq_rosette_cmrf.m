@@ -87,10 +87,10 @@ SPI.exc_fa_mode   = 'import';    % 'equal',  'ramped',  'import'
 SPI.reph_duration = 0.6 *1e-3;   % [s] slice rephaser duration
 
 % params: gradient spoiling & rf spoiling
-SPI.spoil_nTwist   = 4;           % [ ] number of 2pi twist in slice
+SPI.spoil_nTwist   = 4 * FOV.Nz;  % [ ] number of 2pi twist in slice
 SPI.spoil_rf_mode  = 'lin';       % 'lin' or 'quad'
 SPI.spoil_rf_inc   = 0 *pi/180;   % [rad] rf phase increment
-SPI.spoil_duration = 1.0 *1e-3;  % [s] slice spoiler duration
+SPI.spoil_duration = 1.0 *1e-3;   % [s] slice spoiler duration
 
 % k-space geometry params
 SPI.geo.design  = 'rosette';
